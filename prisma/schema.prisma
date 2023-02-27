@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model countries {
+  code           Int     @id
+  name           String? @unique(map: "name") @db.VarChar(20)
+  continent_name String  @db.VarChar(255)
+  users          users[]
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model order_products {
+  order_id   Int
+  product_id Int
+  quantity   Int?     @default(0)
+  orders     orders   @relation(fields: [order_id], references: [id], onUpdate: Restrict, map: "order_products_ibfk_1")
+  products   products @relation(fields: [product_id], references: [id], onUpdate: Restrict, map: "order_products_ibfk_2")
+
+  @@id([order_id, product_id])
+  @@index([order_id], map: "order_id")
+  @@index([product_id], map: "product_id")
+}
+
+model orders {
+  id             Int              @id
+  user_id        Int?
+  status         String?          @db.VarChar(6)
+  created_at     DateTime?        @default(dbgenerated("(curdate())")) @db.DateTime(0)
+  order_products order_products[]
+  users          users?           @relation(fields: [user_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "orders_ibfk_1")
+
+  @@index([user_id], map: "orders_ibfk_1")
+}
+
+model products {
+  id             Int              @id
+  name           String           @db.VarChar(10)
+  price          Int?             @default(0)
+  status         String?          @db.VarChar(10)
+  created_at     DateTime?        @default(dbgenerated("(curdate())")) @db.DateTime(0)
+  order_products order_products[]
+}
+
+model users {
+  id            Int        @id
+  full_name     String?    @db.VarChar(20)
+  email         String?    @unique(map: "email") @db.VarChar(20)
+  gender        String?    @db.Char(1)
+  date_of_birth DateTime?  @db.Date
+  created_at    DateTime?  @default(dbgenerated("(curdate())")) @db.DateTime(0)
+  country_code  Int?
+  orders        orders[]
+  countries     countries? @relation(fields: [country_code], references: [code], onDelete: Restrict, onUpdate: Restrict, map: "users_ibfk_1")
+
+  @@index([country_code], map: "users_ibfk_1")
+}
